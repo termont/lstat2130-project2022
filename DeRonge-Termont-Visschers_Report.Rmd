@@ -1,0 +1,334 @@
+---
+title: "Project LSTAT 2130"
+author:
+- De Rongé Jessica
+- Termont Didier
+- Visschers Antoine
+output:
+  pdf_document: 
+    toc: true
+    toc_depth: 2
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,comment = NA, tidy="styler")
+```
+
+```{r libraries, include=FALSE}
+library(ggplot2)
+library(coda)
+library(rjags)
+library(R2WinBUGS)
+
+```
+
+
+```{r data}
+cannabis <- read.csv("cannabis.txt",sep="",header = TRUE)
+set.seed(20220501)
+```
+
+```{r functions_def}
+M <- 10000
+
+log.f <- function(pi,N,xplus) {
+  gamma <- (1+35*pi)/36
+  (xplus*log(gamma)) + ((N-xplus)*log(1-gamma))
+}
+
+log.f.2 <- function(pi,N,xplus) {
+  (N-xplus)*log(1-pi)+xplus*log(1+35*pi)
+}
+
+metropolis <- function(pi0,M, sd.prop, lpost, N, xplus) {
+  pi = numeric(M)
+  pi[1]=pi0
+  
+  n.accept = 0
+  for(i in 2:M) {
+    pi.prop = pi[i-1]+rnorm(1,0,sd.prop)
+    prop = min(1,exp(lpost(pi.prop,N,xplus) - lpost(pi[i-1],N,xplus)))
+    accept = (runif(1) <= prop)
+    if(accept) {
+      n.accept = n.accept+1
+      pi[i] = pi.prop
+    } else {
+      pi[i] = pi[i-1]
+    }
+  }
+  
+  accept.rate = round(n.accept/(M-1),2)
+  cat("Acceptance rate: ",accept.rate,"\n")
+  
+  return(pi)
+}
+
+```
+
+\newpage
+
+# Question 1
+
+we have X the random variable for the answer of the question __Have you smoked cannabis?__ 
+
+D is the event __rolled a double 6__. From the total sum rules we can write
+$$P(X)=P(X|D)P(D)+P(X|\bar{D})P(\bar{D})$$
+
+From the information we have we know that:
+
+- $P(D)=\frac{1}{36}$
+- $P(\bar{D})=\frac{35}{36}$
+- $P(X=1|D) = 1$ and $P(X=0|D)=0$
+- $Y|\bar{D} \sim Ber(\pi)$
+
+Putting all together we have
+$$P(X=x) = \frac{x}{36} + \frac{35}{36} (1-\pi)^{1-x} \pi^x$$
+
+We want to compute the probability $\gamma$ that the awnser is __yes__
+$$\gamma = P(X=1) = \frac{1}{36} + \frac{35}{36} (1-\pi)^{1-1} \pi^1$$
+$$\gamma = \frac{1+35\pi}{36}$$
+
+We can state that X is folowing a Bernoulli distribution with parameter $\gamma$: $$X|\pi \sim Ber(\gamma) = Ber(\frac{1+35\pi}{36})$$
+
+\newpage
+
+# Question 2
+
+We have $Y$ a new random variables that is the sum of all __yes__ anwser for a sample of size $n$ of iid variables:
+$$Y = \sum_{i=1}^{n}{X_i}$$
+with $X_i \sim Ber(\frac{1+35\pi}{36})$
+
+from Bayes rules, we can write $$P(\pi|Y) \propto P(Y|\pi) P(\pi)$$
+
+## Prior $P(\pi)$
+we assume that we have no prior information on the proportion of persons that have smoken cannabis. Therefore we take $\pi \sim Uni(0,1)$.
+
+$P(\pi) \propto 1$
+
+## Likelihood $P(Y|\pi)$
+Since all $X_i$ are iid we can write
+$$P(Y|\pi) = \prod_{i=1}^{n}{P(X_i|\pi)} \propto \prod_{i=1}^{n}{(1-\gamma(\pi))^{1-x_i}\gamma(\pi)^{x_i}}$$
+
+$$P(Y|\pi)\propto (1-\gamma(\pi))^{n - \sum{x_i}} \gamma(\pi)^{\sum{x_i}}$$
+
+## Posterior $P(\pi|Y)$
+
+From Bayes we know that $P(\pi|Y) \propto likelihood \times  prior$.
+Since we have computed the likelihood and the prior, we have the posterior:
+
+$$P(\pi|Y) \propto (1-\gamma(\pi))^{n - \sum{x_i}} \gamma(\pi)^{\sum{x_i}}$$
+
+after replacing the $\gamma$ by $\pi$, we have a posterior that is proportionnal to $$ P(\pi|Y) \propto (1+35\pi)^{\sum{x_i}} (1-\pi)^{n-\sum{x_i}}$$
+
+\newpage
+
+# Question 3
+
+## Metropolis algorithm for a sample of pi
+
+```{r metro_cannabis,echo=TRUE}
+pi = metropolis(
+  pi0=0.5,M,sd=0.01,
+  lpost=log.f.2,N=nrow(cannabis),xplus=sum(cannabis$y))
+```
+
+The following figure will give the convergence information of the sample:
+
+```{r}
+plot(pi)
+```
+
+
+## Plausible value for pi
+
+for this we take a 95% credible interval on the sample for pi. We must remove the burn-in part of the sample
+```{r ic95_cannabis, echo=TRUE}
+quantile(pi[200:M],c(0.025,0.975))
+```
+
+## Probability that the proportion of cannabis smoker is over 10%
+
+```{r, echo=TRUE}
+nrow(subset(data.frame(pi[200:M]),pi>=0.1))/(M-200)
+```
+
+\newpage
+
+# Question 4
+
+We generate two samples with the metropolis algorithm. One for the proportion of male smokers (`pi_m`) and the other for the female smokers (`pi_f`)
+The sample for the difference of proportion between the male and the female will be given by $\delta = pi_m[200:M] - pi_f[200:M]$.
+We do not take the burn-in size (200 first elements of the samples)
+
+```{r, echo=TRUE}
+can_m =subset(cannabis,male==1)
+pi_m = metropolis(
+  pi0=0.5,M,sd.prop=0.009,
+  lpost=log.f.2,N=nrow(can_m),xplus=sum(can_m$y))
+
+can_f=subset(cannabis,male==0)
+pi_f = metropolis(
+  pi0=0.5,M,sd.prop=0.01,
+  lpost=log.f.2,N=nrow(can_f),xplus=sum(can_f$y))
+
+delta = pi_m[200:M] - pi_f[200:M]
+```
+
+The two next figures shows that the samples are converging to random variables and this help to generate the distribution of the $\delta$.
+
+```{r, out.width="50%"}
+plot(pi_m,ylim=c(0,0.5))
+points(pi_f,col="red")
+hist(delta)
+```
+With these we can have a first impression that $\delta > 0$. We can formalize this by computing the 95% credible interval and the probality $P(\delta > 0)$
+
+IC:
+```{r, echo=T}
+quantile(delta,c(0.025,0.975))
+```
+
+$P(\delta>0)$
+```{r, echo=T, comment=NA}
+nrow(subset(data.frame(delta),delta>0))/length(delta)
+```
+
+We can conclude that there is a significant difference of cannabis smoker based on the gender. The proportion of male smokers is larger than the female smokers.
+
+\newpage
+
+# Question 5
+
+## -a- MCMC in jags
+
+We will use priors that are uninformative: $\alpha_0 , \alpha_1, \beta_0, \beta_1 \sim N(0,\sigma^2 = 10^6)$
+
+The modeling of the logistic regression will be done by a Bernoulli experiment. 
+From the question 1, we know that the experiment Y follows a Bernoulli with the parameter $\gamma = \frac{1+35\pi}{36}$
+So we will have:
+
+- $Y_i|\alpha_0,\alpha_1,\beta_0,\beta_1 \sim Ber(\frac{1+35\pi_i}{36})$
+- $logit(\pi_i) = (\alpha_0 + \alpha_1(x-40)) \times male_i + (\beta_0 + \beta_1(x-40)) \times (1-male_i)$
+- $x_i$ is the age of the person
+- $male_i = 1$ if the person is a male, 0 otherwise
+
+All of this is implemented in the following R code that will be used with 'rjags'
+
+```{r mcmc_model, echo=TRUE, warning=FALSE}
+model <- function() {
+  #sample
+  for(i in 1:n) {
+    y[i] ~ dbin((1+35*pi[i])/36,1)
+    logit(pi[i]) <- (
+      (alpha0 + alpha1*(age[i]-40))*male[i]) + 
+      ((beta0 + beta1*(age[i]-40))*(1-male[i]))
+  }
+  
+  # prior
+  alpha0 ~ dnorm(0,1E-6)
+  alpha1 ~ dnorm(0,1E-6)
+  beta0  ~ dnorm(0,1E-6)
+  beta1  ~ dnorm(0,1E-6)
+  
+  # function to monitor
+  delta <- alpha1 - beta1
+  
+  # predict the odds for males who are 25 year old
+  etha_m_25 <- alpha0 + alpha1*(25-40)
+}
+
+
+write.model(model,"cannabis.bug")
+
+```
+
+Let's notice the part with `delta` and `etha_m_25` are here to answer to the questions 5.b and 5.c and will be discussed at that time.
+
+The execution to generate the prior sample is done with the following code:
+
+```{r mcmc, echo=TRUE}
+cannabis.list <- with(cannabis,
+                      list(y=y,
+                           age=age,
+                           male=male,
+                           n=nrow(cannabis)))
+
+params <- c("alpha0","alpha1","beta0","beta1","delta","etha_m_25")
+
+inits.list <- list(list(
+  alpha0=0,
+  alpha1=0,
+  beta0=0,
+  beta1 =0),
+  list(
+    alpha0=-4,
+    alpha1=-1,
+    beta0=-5,
+    beta1=-1
+  )
+  )
+
+
+cannabis.model <- jags.model(
+  file="cannabis.bug",
+  data=cannabis.list,
+  inits = inits.list,
+  n.chains = length(inits.list))
+
+update(cannabis.model,1000)
+
+out = coda.samples(model=cannabis.model,
+                   variable.names = params,
+                   n.iter=10000)
+
+out.matrix = as.matrix(out)
+
+# plot(out)
+```
+ 
+```{r}
+effectiveSize(out)
+summary(out)
+HPDinterval(out)
+```
+## -b- Plausible values
+
+### $\alpha_1$
+
+From the MCMC chains we can generate the histogram for $\alpha_1$
+
+```{r, out.width="75%"}
+hist(out.matrix[,"alpha1"],xlab="alpha1")
+```
+
+And extract the HPD interval at 95%:
+
+```{r, echo=T}
+HPDinterval(mcmc(out.matrix[,"alpha1"]))
+```
+
+### $\beta_1$
+From the MCMC chains we can generate the histogram for $\beta_1$
+
+```{r, out.width="75%"}
+#ggplot(data=data.frame(out.matrix[,"beta1"]),aes(x=beta1)) +
+#  geom_histogram()
+
+hist(out.matrix[,"beta1"],xlab="beta1")
+```
+
+And extract the HPD interval at 95%:
+
+```{r, echo=T}
+HPDinterval(mcmc(out.matrix[,"beta1"]))
+```
+
+### $\delta = \alpha1 - \beta1$
+
+### evolution of the odds $\eta_x$
+
+
+## -c- probability of canabis usage for male of 25 years
+
+
