@@ -7,8 +7,6 @@ set.seed(20220501)
 
 cannabis = read.csv("cannabis.txt",sep="",header=T)
 
-#cannabis <- subset(cannabis,male==1)
-#cannabis <- subset(cannabis,male==0)
 
 model <- function() {
   #sample
