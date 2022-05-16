@@ -52,15 +52,14 @@ pi = metropolis(
 
 ## Convergence
 ## acceptance rate is 40% : OK (univariate)
-## 
 geweke.diag(mcmc(pi))
-geweke.plot(mcmc(pi),nbins=10)
+geweke.plot(mcmc(pi),nbins=100)
 
 ## summary
 traceplot(mcmc(pi))
 quantile(pi[200:M],c(0.025,0.975))
 HPDinterval(mcmc(pi[200:M]))
-
+effectiveSize(mcmc(pi))
 
 ################################################################################
 ################################################################################
@@ -70,32 +69,34 @@ HPDinterval(mcmc(pi[200:M]))
 ## Metropolis for the male subset
 can_m =subset(cannabis,male==1)
 pi_m = metropolis(
-  pi0=0.5,M,sd.prop=0.040,
+  pi0=0.5,M,sd.prop=0.030,
   lpost=log.f.2,N=nrow(can_m),xplus=sum(can_m$y))
 
 ## Convergence
 geweke.diag(mcmc(pi_m))
-geweke.plot(mcmc(pi_m),nbins=10)
+geweke.plot(mcmc(pi_m),nbins=100)
 
 ## summary
 traceplot(mcmc(pi_m))
 quantile(pi_m[200:M],c(0.025,0.975))
 HPDinterval(mcmc(pi_m[200:M]))
+effectiveSize(mcmc(pi_m))
 
 ## Metropolis for the female subset
 can_f=subset(cannabis,male==0)
 pi_f = metropolis(
-  pi0=0.5,M,sd.prop=0.0255,
+  pi0=0.5,M,sd.prop=0.0250,
   lpost=log.f.2,N=nrow(can_f),xplus=sum(can_f$y))
 
 ## Convergence
 geweke.diag(mcmc(pi_f))
-geweke.plot(mcmc(pi_f),nbins=10)
+geweke.plot(mcmc(pi_f),nbins=100)
 
 ## summary
 traceplot(mcmc(pi_f))
 quantile(pi_f[200:M],c(0.025,0.975))
 HPDinterval(mcmc(pi_f[200:M]))
+effectiveSize(mcmc(pi_f))
 
 ## What about the delta
 delta = pi_m[200:M] - pi_f[200:M]
