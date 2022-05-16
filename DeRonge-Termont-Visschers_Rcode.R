@@ -160,7 +160,6 @@ inits.list <- list(list(
 )
 
 params <- c("alpha0","alpha1","beta0","beta1","delta","etha_m_25")
-#params <- c("alpha0","alpha1")
 
 cannabis.model <- jags.model(
   file="cannabis_2.bug",
@@ -182,6 +181,3 @@ summary(out)
 HPDinterval(out)
 
 #hist(out.matrix[,"delta"],freq=F)
-
-
-
