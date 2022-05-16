@@ -168,7 +168,7 @@ cannabis.model <- jags.model(
   inits = inits.list ,
   n.chains = length(inits.list))
 
-update(cannabis.model,1000)
+update(cannabis.model,10000)
 
 out = coda.samples(model=cannabis.model,
                    variable.names = params,

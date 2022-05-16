@@ -44,13 +44,7 @@ inits.list <- list(list(
   alpha0=0,
   alpha1=0,
   beta0=0,
-  beta1 =0),
-  list(
-    alpha0=-4,
-    alpha1=-1,
-    beta0=-5,
-    beta1=-1
-  )
+  beta1 =0)
   )
 
 params <- c("alpha0","alpha1","beta0","beta1","delta","etha_m_25")
@@ -66,7 +60,7 @@ update(cannabis.model,1000)
 
 out = coda.samples(model=cannabis.model,
                    variable.names = params,
-                   n.iter=10)
+                   n.iter=10000)
 
 out.matrix = as.matrix(out)
 
@@ -77,4 +71,10 @@ HPDinterval(out)
 
 #hist(out.matrix[,"delta"],freq=F)
 
-gelman.diag(list(out[1],out[2]))
+geweke.diag(mcmc(out.matrix[,"beta1"]))
+geweke.plot(mcmc(out.matrix[,"beta1"]),nbin=15)
+
+traceplot(mcmc(out.matrix[,"beta1"]))
+#gelman.diag(list(out[1],out[2]))
+
+
