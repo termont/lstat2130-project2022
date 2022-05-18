@@ -280,7 +280,7 @@ update(cannabis.model,1000)
 
 out = coda.samples(model=cannabis.model,
                    variable.names = params,
-                   n.iter=10000)
+                   n.iter=20000)
 
 out.matrix = as.matrix(out)
 

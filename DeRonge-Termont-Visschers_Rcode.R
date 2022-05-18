@@ -10,6 +10,7 @@ library(R2WinBUGS)
 ################################################################################
 rm(list=ls())
 cannabis <- read.csv("cannabis.txt",sep="",header = TRUE)
+set.seed(20220501)
 
 ################################################################################
 ################################################################################
@@ -47,7 +48,7 @@ metropolis <- function(pi0,M, sd.prop, lpost, N, xplus) {
 ## Running of the metropolis algo on the full population
 M <- 10000
 pi = metropolis(
-  pi0=0.5,M,sd=0.028,
+  pi0=0.5,M,sd=0.024,
   lpost=log.f.2,N=nrow(cannabis),xplus=sum(cannabis$y))
 
 ## Convergence
@@ -55,11 +56,25 @@ pi = metropolis(
 geweke.diag(mcmc(pi))
 geweke.plot(mcmc(pi),nbins=100)
 
+## second chain
+pi_2 = metropolis(
+  pi0=0.75,M,sd=0.024,
+  lpost=log.f.2,N=nrow(cannabis),xplus=sum(cannabis$y))
+
+geweke.diag(mcmc(pi))
+geweke.plot(mcmc(pi),nbins=100)
+
+##
+gelman.diag(list(mcmc(pi),mcmc(pi_2)))
+
 ## summary
 traceplot(mcmc(pi))
 quantile(pi[200:M],c(0.025,0.975))
 HPDinterval(mcmc(pi[200:M]))
 effectiveSize(mcmc(pi))
+
+
+nrow(subset(data.frame(pi[200:M]),pi>=0.1))/(M-200)
 
 ################################################################################
 ################################################################################
@@ -69,7 +84,7 @@ effectiveSize(mcmc(pi))
 ## Metropolis for the male subset
 can_m =subset(cannabis,male==1)
 pi_m = metropolis(
-  pi0=0.5,M,sd.prop=0.030,
+  pi0=0.5,M,sd.prop=0.033,
   lpost=log.f.2,N=nrow(can_m),xplus=sum(can_m$y))
 
 ## Convergence
@@ -85,7 +100,7 @@ effectiveSize(mcmc(pi_m))
 ## Metropolis for the female subset
 can_f=subset(cannabis,male==0)
 pi_f = metropolis(
-  pi0=0.5,M,sd.prop=0.0250,
+  pi0=0.5,M,sd.prop=0.024,
   lpost=log.f.2,N=nrow(can_f),xplus=sum(can_f$y))
 
 ## Convergence
@@ -109,6 +124,29 @@ geweke.plot(mcmc(delta))
 traceplot(mcmc(delta))
 densplot(mcmc(delta))
 HPDinterval(mcmc(delta))
+
+
+f.pi_m = data.frame(pi_m)
+f.pi_m$seq = seq(1,length(pi_m))
+
+f.pi_f = data.frame(pi_f)
+f.pi_f$seq = seq(1,length(pi_f))
+
+ggplot() +
+  theme_bw() +
+  theme(panel.border = element_blank()) +
+  geom_point(data=f.pi_m,aes(x=seq,y=pi_m),color="blue") +
+  geom_point(data=f.pi_f,aes(x=seq,y=pi_f),color="red") +
+  geom_vline(aes(xintercept=200),color="black",size=1) +
+  labs(
+    title="MCMC chain for pi_m and pi_f",
+    subtitle="pi_m in blue, pi_f in red",
+    y="pi_m \ pi_f")
+
+plot(pi_m,ylim=c(0,0.5))
+points(pi_f,col="red")
+hist(delta)
+
 
 ################################################################################
 ################################################################################
@@ -168,16 +206,16 @@ cannabis.model <- jags.model(
   inits = inits.list ,
   n.chains = length(inits.list))
 
-update(cannabis.model,10000)
+update(cannabis.model,1000)
 
 out = coda.samples(model=cannabis.model,
                    variable.names = params,
-                   n.iter=10)
+                   n.iter=20000)
 
 out.matrix = as.matrix(out)
 
 effectiveSize(out)
-#plot(out)
+plot(out)
 summary(out)
 HPDinterval(out)
 
