@@ -1,0 +1,19 @@
+---
+title: "Untitled"
+author: "Termont Didier"
+date: "18/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+$$P(\pi|D) \propto (\frac{1+35\pi}{36})^y \times (1-(\frac{1+35\pi}{36}))^{n-y} $$
+
+$$P(\pi|D) \propto \frac{1}{36^{y+n-y}} \times (1+35\pi)^y \times (36-1-35\pi)^{n-y})$$
+
+
+$$P(\pi|D) \propto \frac{1}{36^{y+n-y}} \times (1+35\pi)^y \times 35^{n-y} \times (1-\pi)^{n-y}$$
+
+$$P(\pi|D) \propto (1+35\pi)^y \times (1-\pi)^{n-y} $$
