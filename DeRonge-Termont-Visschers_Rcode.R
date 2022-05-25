@@ -64,7 +64,7 @@ pi_2 = metropolis(
   lpost=log.f.2,N=nrow(cannabis),yplus=sum(cannabis$y))
 
 ## The effectif size
-effectiveSize(mcmc(pi))
+effectiveSize(mcmc(pi[200:M]))
 
 ## Convergence
 traceplot(mcmc(pi))
@@ -98,7 +98,7 @@ pi_m = metropolis(
   lpost=log.f.2,N=nrow(can_m),yplus=sum(can_m$y))
 
 ## The effectif size
-effectiveSize(mcmc(pi_m))
+effectiveSize(mcmc(pi_m[200:M]))
 
 ## Convergence
 traceplot(mcmc(pi_m))
@@ -124,7 +124,7 @@ pi_f = metropolis(
   lpost=log.f.2,N=nrow(can_f),yplus=sum(can_f$y))
 
 ## The effectif size
-effectiveSize(mcmc(pi_f))
+effectiveSize(mcmc(pi_f[200:M]))
 
 ## Convergence
 traceplot(mcmc(pi_f))
