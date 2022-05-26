@@ -113,7 +113,7 @@ HPDinterval(mcmc(pi_m[200:M]))
 
 ## The posterior probability that among 20-59 years old men, 
 ##there is at least 10% of cannabis’ users 
-nrow(subset(data.frame(pi_m[200:M]),pi_m>=0.1))/(M-200)
+mean(pi_m>0.1)
 
 #2. Women
 
@@ -139,7 +139,7 @@ HPDinterval(mcmc(pi_f[200:M]))
 
 ## The posterior probability that among 20-59 years old women, 
 ##there is at least 10% of cannabis’ users 
-nrow(subset(data.frame(pi_f[200:M]),pi_f>=0.1))/(M-200)
+mean(pi_f>0.1)
 
 # 3.Delta
 
@@ -187,6 +187,7 @@ HPDinterval(mcmc(delta))
 
 ## The probability that delta is bigger than 0
 nrow(subset(data.frame(delta[200:M]),delta>0))/(M-200)
+
 
 ################################################################################
 ################################################################################
