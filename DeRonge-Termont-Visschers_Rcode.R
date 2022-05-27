@@ -1,3 +1,9 @@
+################################################################################
+# LSTAT2130 Project: code
+#Jessica De Rongé - Didier Termont - Antoine Visschers
+################################################################################
+
+
 library(ggplot2)
 library(coda)
 library(rjags)
